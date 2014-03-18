@@ -29,22 +29,23 @@ import urllib
 import urllib2
 import json
 
-dnspod_api = 'https://www.dnspod.com/api/'
+
 dnspod_username = 'your username'
 dnspod_password = 'your password'
-dnspod_domain = [
+dnspod_domains = [
 	{
 		'domain'		:	'example.com',
 		'sub_domain'	:	['@', '*']
 	}
 ]
 
+_dnspod_api = 'https://www.dnspod.com/api/'
 _dnspod_myip = '127.0.0.1'
 _dnspod_cookie = None
 
 
 def api_call(api):
-	api_url = dnspod_api + api
+	api_url = _dnspod_api + api
 
 	if api == 'auth':
 		return api_url + '?email=' + dnspod_username + '&password=' + dnspod_password
@@ -52,16 +53,18 @@ def api_call(api):
 		return api_url + '/'
 
 
-def url_read(url, postdata = None):
+def url_read(url, postdata = None, method = None):
 	result = None
 
 	print(url)
 
 	try:
 		req = urllib2.Request(url, data = postdata)
+		req.add_header('Content-type', 'application/json')
+		if not method is None:
+			req.get_method = lambda: method
 		if not _dnspod_cookie is None:
 			req.add_header('Cookie', _dnspod_cookie)
-			print('Add Cookie' + _dnspod_cookie)
 		urlItem = urllib2.urlopen(req, timeout = 10)
 		result = urlItem.read()
 		urlItem.close()
@@ -107,27 +110,29 @@ def dnspod_records(domain):
 	return records
 
 
-def dnspod_record_modify(domain, record_id):
-	postdata = {
-		'sub_domain'	:	'test',
-		'area'			:	'default',
-		'record_type'	:	'A',
-		'value'			:	'2.0.1.2'
-	}
+def dnspod_record_modify(domain, record_id, postdata):
+	modify_status = url_read('{0}{1}/{2}'.format(api_call('records'), domain, record_id), json.dumps(postdata), 'PUT')
+	print(modify_status)
+	if not modify_status is None:
+		modify_result = json.loads(modify_status)
+		print(postdata['sub_domain'] + '.' + domain + ' Change IP: ' + postdata['value'])
+		print(modify_result['message'])
 
 
 if __name__ == '__main__':
 	print('My IP is: ' + get_myip())
 	if dnspod_login():
-		records = dnspod_records('example.com')
-		for record in records:
-			print('status = {0}'.format(record['status']))
-			print('area = {0}'.format(record['area']))
-			print('value = {0}'.format(record['value']))
-			print('id = {0}'.format(record['id']))
-			print('record_type = {0}'.format(record['record_type']))
-			print('sub_domain = {0}'.format(record['sub_domain']))
-			print('ttl = {0}'.format(record['ttl']))
-			print('updated_on = {0}'.format(record['updated_on']))
-			print('domain_id = {0}'.format(record['domain_id']))
-			print('')
+		for domain in dnspod_domains:
+			records = dnspod_records(domain['domain'])
+			for record in records:
+				if record['sub_domain'] in domain['sub_domain']:
+					if record['record_type'] == 'A' or record['record_type'] == 'AAAA':
+						if record['value'] != _dnspod_myip:
+							postdata = {
+								'sub_domain'	:	record['sub_domain'],
+								'area'			:	'0',
+								'record_type'	:	record['record_type'],
+								'value'			:	_dnspod_myip,
+								'ttl'			:	record['ttl']
+							}
+							dnspod_record_modify(domain['domain'], record['id'], postdata)
