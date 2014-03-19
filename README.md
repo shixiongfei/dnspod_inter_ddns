@@ -10,6 +10,7 @@ Dnspod International Dynamic DNS written in Python
 1. Add your domain A record on Dnspod.com
 2. Download [dnspod_inter_ddns.py](https://raw.github.com/jenson-shi/dnspod_inter_ddns/master/dnspod_inter_ddns.py)
 3. Modify (dnspod_username), (dnspod_password) and (dnspod_domains) to yours
+	* dnspod_domains support multi-domain
 4. Make the script executable on Unix like system(Linux, Mac OS X, etc.)
 	* chmod +x dnspod_inter_ddns.py
 	* chmod 777 dnspod_inter_ddns.py
