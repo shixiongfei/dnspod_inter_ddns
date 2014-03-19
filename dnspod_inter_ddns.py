@@ -30,8 +30,8 @@ import urllib2
 import json
 
 
-dnspod_username = 'your username'
-dnspod_password = 'your password'
+dnspod_username = 'your_username'
+dnspod_password = 'your_password'
 dnspod_domains = [
 	{
 		'domain'		:	'example.com',
@@ -39,9 +39,14 @@ dnspod_domains = [
 	}
 ]
 
+
 _dnspod_api = 'https://www.dnspod.com/api/'
 _dnspod_myip = '127.0.0.1'
 _dnspod_cookie = None
+_dnspod_lasterror = {
+	'error': 'Success',
+	'message': ''
+}
 
 
 def api_call(api):
@@ -56,8 +61,6 @@ def api_call(api):
 def url_read(url, postdata = None, method = None):
 	result = None
 
-	print(url)
-
 	try:
 		req = urllib2.Request(url, data = postdata)
 		req.add_header('Content-type', 'application/json')
@@ -69,11 +72,14 @@ def url_read(url, postdata = None, method = None):
 		result = urlItem.read()
 		urlItem.close()
 	except urllib2.URLError as e:
-		print(e.reason)
+		_dnspod_lasterror['error'] = 'URLError'
+		_dnspod_lasterror['message'] = e.reason
 	except urllib2.HTTPError as e:
-		print(e.reason)
+		_dnspod_lasterror['error'] = 'HTTPError'
+		_dnspod_lasterror['message'] = e.reason
 	except:
-		print('UnknownError')
+		_dnspod_lasterror['error'] = 'FetchError'
+		_dnspod_lasterror['message'] = 'HTTP data fetch error.'
 
 	return result
 
@@ -88,12 +94,22 @@ def get_myip():
 	return None
 
 
+def output_lasterror():
+	print('{0} : {1}'.format(_dnspod_lasterror['error'], _dnspod_lasterror['message']))
+
+
 def dnspod_login():
 	login_status = url_read(api_call('auth'))
 	if not login_status is None:
-		global _dnspod_cookie
-		_dnspod_cookie = urllib.urlencode(json.loads(login_status))
-		return True
+		auth = json.loads(login_status)
+		if not auth.has_key('error'):
+			global _dnspod_cookie
+			_dnspod_cookie = urllib.urlencode(auth)
+			return True
+		else:
+			_dnspod_lasterror['error'] = 'DnspodError'
+			_dnspod_lasterror['message'] = auth['error']
+
 	return False
 	
 
@@ -103,36 +119,52 @@ def dnspod_records(domain):
 	if not records_status is None:
 		records = json.loads(records_status)
 		if type(records) != type(list()):
+			_dnspod_lasterror['error'] = 'DnspodError'
 			if type(records) == type(dict()):
-				print(records['error'])
+				_dnspod_lasterror['message'] = records['error']
 			else:
-				print('UnknownError')
+				_dnspod_lasterror['message'] = 'UnknownError'
 	return records
 
 
 def dnspod_record_modify(domain, record_id, postdata):
 	modify_status = url_read('{0}{1}/{2}'.format(api_call('records'), domain, record_id), json.dumps(postdata), 'PUT')
-	print(modify_status)
 	if not modify_status is None:
 		modify_result = json.loads(modify_status)
-		print(postdata['sub_domain'] + '.' + domain + ' Change IP: ' + postdata['value'])
-		print(modify_result['message'])
+		_dnspod_lasterror['error'] = 'Success'
+		_dnspod_lasterror['message'] = '{0}.{1} has changed IP to {2}, {3}'.format(postdata['sub_domain'], domain, 
+																				postdata['value'], modify_result['message'])
+		return True
+	return False
 
 
-if __name__ == '__main__':
-	print('My IP is: ' + get_myip())
+
+def dnspod_ddns():
+	get_myip()
+
 	if dnspod_login():
 		for domain in dnspod_domains:
 			records = dnspod_records(domain['domain'])
-			for record in records:
-				if record['sub_domain'] in domain['sub_domain']:
-					if record['record_type'] == 'A' or record['record_type'] == 'AAAA':
-						if record['value'] != _dnspod_myip:
-							postdata = {
-								'sub_domain'	:	record['sub_domain'],
-								'area'			:	'0',
-								'record_type'	:	record['record_type'],
-								'value'			:	_dnspod_myip,
-								'ttl'			:	record['ttl']
-							}
-							dnspod_record_modify(domain['domain'], record['id'], postdata)
+			if not records is None:
+				for record in records:
+					if record['sub_domain'] in domain['sub_domain']:
+						if record['record_type'] == 'A' or record['record_type'] == 'AAAA':
+							if record['value'] != _dnspod_myip:
+								postdata = {
+									'sub_domain'	:	record['sub_domain'],
+									'area'			:	'0',
+									'record_type'	:	record['record_type'],
+									'value'			:	_dnspod_myip,
+									'ttl'			:	record['ttl']
+								}
+								dnspod_record_modify(domain['domain'], record['id'], postdata)
+								output_lasterror()
+			else:
+				output_lasterror()
+	else:
+		output_lasterror()
+
+
+
+if __name__ == '__main__':
+	dnspod_ddns()
