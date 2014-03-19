@@ -28,6 +28,9 @@
 import urllib
 import urllib2
 import json
+import sys
+import time
+import signal
 
 
 dnspod_username = 'your_username'
@@ -38,6 +41,7 @@ dnspod_domains = [
 		'sub_domain'	:	['@', '*']
 	}
 ]
+dnspod_daemon = 300
 
 
 _dnspod_api = 'https://www.dnspod.com/api/'
@@ -165,6 +169,16 @@ def dnspod_ddns():
 		output_lasterror()
 
 
+def _signal_handler(signal, frame):
+    print 'Exiting...'
+    sys.exit(0)
 
 if __name__ == '__main__':
-	dnspod_ddns()
+	if len(sys.argv) >= 2 and sys.argv[1] == 'daemon':
+		signal.signal(signal.SIGINT, _signal_handler)
+		print('You may pressed Ctrl + C to exit.')
+		while(True):
+			dnspod_ddns()
+			time.sleep(dnspod_daemon)
+	else:
+		dnspod_ddns()
