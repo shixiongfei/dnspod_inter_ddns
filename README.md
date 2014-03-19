@@ -30,4 +30,6 @@ Dnspod International Dynamic DNS written in Python
 
 ##Links
 
+[中文使用说明](http://shixf.com/dnspod-inter-ddns-cn/)
+
 [Visit Page](http://shixf.com/dnspod-inter-ddns/)
