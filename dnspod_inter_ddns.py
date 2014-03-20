@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 '''
@@ -170,8 +170,8 @@ def dnspod_ddns():
 
 
 def _signal_handler(signal, frame):
-    print 'Exiting...'
-    sys.exit(0)
+	print 'Exiting...'
+	sys.exit(0)
 
 if __name__ == '__main__':
 	if len(sys.argv) >= 2 and sys.argv[1] == 'daemon':
