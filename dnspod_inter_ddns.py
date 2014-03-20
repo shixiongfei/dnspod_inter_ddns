@@ -144,9 +144,7 @@ def dnspod_record_modify(domain, record_id, postdata):
 
 
 def dnspod_ddns():
-	get_myip()
-
-	if dnspod_login():
+	if get_myip() and dnspod_login():
 		for domain in dnspod_domains:
 			records = dnspod_records(domain['domain'])
 			if not records is None:

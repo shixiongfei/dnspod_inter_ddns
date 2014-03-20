@@ -12,8 +12,7 @@ Dnspod International Dynamic DNS written in Python
 3. Modify (dnspod_username), (dnspod_password) and (dnspod_domains) to yours
 	* dnspod_domains support multi-domain
 4. Make the script executable on Unix like system(Linux, Mac OS X, etc.)
-	* chmod +x dnspod_inter_ddns.py
-	* chmod 777 dnspod_inter_ddns.py
+	* chmod a+x dnspod_inter_ddns.py
 5. You can run script once
 	* ./dnspod_inter_ddns.py
 6. Of course, also can run in daemon mode. In daemon mode will check IP every 5 minutes
