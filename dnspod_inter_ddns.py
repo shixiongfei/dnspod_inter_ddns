@@ -44,7 +44,7 @@ dnspod_domains = [
 dnspod_daemon = 300
 
 
-_dnspod_api = 'https://www.dnspod.com/api/'
+_dnspod_api = 'https://api.dnspod.com/'
 _dnspod_myip = '127.0.0.1'
 _dnspod_cookie = None
 _dnspod_lasterror = {
@@ -54,10 +54,8 @@ _dnspod_lasterror = {
 
 
 def api_call(api):
-	api_url = _dnspod_api + api
-
 	if api == 'auth':
-		return api_url + '?email=' + dnspod_username + '&password=' + dnspod_password
+		return _dnspod_api + 'Auth'
 	elif api == 'records':
 		return api_url + '/'
 
@@ -65,14 +63,20 @@ def api_call(api):
 def url_read(url, postdata = None, method = None):
 	result = None
 
+	print url
+
 	try:
 		req = urllib2.Request(url, data = postdata)
-		req.add_header('Content-type', 'application/json')
+		print 'REQ: {0}'.format(req)
+		#req.add_header('Content-type', 'application/json')
+		req.add_header('User-Agent', 'DNSPOD International DDNS/1.1.0 (jenson.shixf@gmail.com)')
 		if not method is None:
 			req.get_method = lambda: method
-		if not _dnspod_cookie is None:
-			req.add_header('Cookie', _dnspod_cookie)
+		#if not _dnspod_cookie is None:
+		#	req.add_header('Cookie', _dnspod_cookie)
+		print '---'
 		urlItem = urllib2.urlopen(req, timeout = 10)
+		print 'urlItem: {0}'.format(urlItem)
 		result = urlItem.read()
 		urlItem.close()
 	except urllib2.URLError as e:
@@ -103,7 +107,13 @@ def output_lasterror():
 
 
 def dnspod_login():
-	login_status = url_read(api_call('auth'))
+	postdata = {
+		'login_email'		:		dnspod_username,
+		'login_password'	:		dnspod_password,
+		'format'			:		'json',
+	}
+	login_status = url_read(api_call('auth'), json.dumps(postdata))
+	print 'Login: {0}'.format(login_status)
 	if not login_status is None:
 		auth = json.loads(login_status)
 		if not auth.has_key('error'):
