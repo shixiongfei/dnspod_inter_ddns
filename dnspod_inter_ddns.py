@@ -46,48 +46,40 @@ dnspod_daemon = 300
 
 _dnspod_api = 'https://api.dnspod.com/'
 _dnspod_myip = '127.0.0.1'
-_dnspod_cookie = None
-_dnspod_lasterror = {
-	'error': 'Success',
-	'message': ''
-}
+_dnspod_token = None
 
 
 def api_call(api):
 	if api == 'auth':
 		return _dnspod_api + 'Auth'
-	elif api == 'records':
-		return api_url + '/'
+	elif api == 'domain.info':
+		return _dnspod_api + 'Domain.Info'
+	elif api == 'records.list':
+		return _dnspod_api + 'Record.List'
+	elif api == 'records.modify':
+		return _dnspod_api + 'Record.Modify'
 
 
 def url_read(url, postdata = None, method = None):
 	result = None
 
-	print url
+	if not postdata is None:
+		postdata = urllib.urlencode(postdata)
 
 	try:
 		req = urllib2.Request(url, data = postdata)
-		print 'REQ: {0}'.format(req)
-		#req.add_header('Content-type', 'application/json')
 		req.add_header('User-Agent', 'DNSPOD International DDNS/1.1.0 (jenson.shixf@gmail.com)')
 		if not method is None:
 			req.get_method = lambda: method
-		#if not _dnspod_cookie is None:
-		#	req.add_header('Cookie', _dnspod_cookie)
-		print '---'
 		urlItem = urllib2.urlopen(req, timeout = 10)
-		print 'urlItem: {0}'.format(urlItem)
 		result = urlItem.read()
 		urlItem.close()
 	except urllib2.URLError as e:
-		_dnspod_lasterror['error'] = 'URLError'
-		_dnspod_lasterror['message'] = e.reason
+		output_lasterror('URLError', e.reason)
 	except urllib2.HTTPError as e:
-		_dnspod_lasterror['error'] = 'HTTPError'
-		_dnspod_lasterror['message'] = e.reason
+		output_lasterror('HTTPError', e.reason)
 	except:
-		_dnspod_lasterror['error'] = 'FetchError'
-		_dnspod_lasterror['message'] = 'HTTP data fetch error.'
+		output_lasterror('FetchError', 'HTTP data fetch error.')
 
 	return result
 
@@ -102,8 +94,8 @@ def get_myip():
 	return None
 
 
-def output_lasterror():
-	print('{0} : {1}'.format(_dnspod_lasterror['error'], _dnspod_lasterror['message']))
+def output_lasterror(error, message):
+	print('{0} : {1}'.format(error, message))
 
 
 def dnspod_login():
@@ -112,69 +104,103 @@ def dnspod_login():
 		'login_password'	:		dnspod_password,
 		'format'			:		'json',
 	}
-	login_status = url_read(api_call('auth'), json.dumps(postdata))
-	print 'Login: {0}'.format(login_status)
+	login_status = url_read(api_call('auth'), postdata)
 	if not login_status is None:
 		auth = json.loads(login_status)
-		if not auth.has_key('error'):
-			global _dnspod_cookie
-			_dnspod_cookie = urllib.urlencode(auth)
+
+		if '1' == auth['status']['code']:
+			global _dnspod_token
+			_dnspod_token = auth['user_token']
 			return True
 		else:
-			_dnspod_lasterror['error'] = 'DnspodError'
-			_dnspod_lasterror['message'] = auth['error']
+			output_lasterror('DnspodErrorCode: {0}'.format(auth['status']['code']), 
+								auth['status']['message'])
 
 	return False
-	
 
-def dnspod_records(domain):
-	records = None
-	records_status = url_read(api_call('records') + domain)
+
+def dnspod_domainid(domain):
+	postdata = {
+		'user_token'	:		_dnspod_token,
+		'domain'		:		domain,
+		'format'		:		'json',
+	}
+	domain_info = url_read(api_call('domain.info'), postdata)
+	if not domain_info is None:
+		info = json.loads(domain_info)
+
+		if '1' == info['status']['code']:
+			return int(info['domain']['id'])
+		else:
+			output_lasterror('DnspodErrorCode: {0}'.format(info['status']['code']), 
+								info['status']['message'])
+	return -1
+
+
+def dnspod_records(domain_id):
+	postdata = {
+		'user_token'	:		_dnspod_token,
+		'domain_id'		:		domain_id,
+		'format'		:		'json',
+	}
+	records_status = url_read(api_call('records.list'), postdata)
 	if not records_status is None:
 		records = json.loads(records_status)
-		if type(records) != type(list()):
-			_dnspod_lasterror['error'] = 'DnspodError'
-			if type(records) == type(dict()):
-				_dnspod_lasterror['message'] = records['error']
-			else:
-				_dnspod_lasterror['message'] = 'UnknownError'
-	return records
+
+		if '1' == records['status']['code']:
+			return records['records']
+		else:
+			output_lasterror('DnspodErrorCode: {0}'.format(records['status']['code']), 
+								records['status']['message'])
+	return None
 
 
-def dnspod_record_modify(domain, record_id, postdata):
-	modify_status = url_read('{0}{1}/{2}'.format(api_call('records'), domain, record_id), json.dumps(postdata), 'PUT')
+def dnspod_record_modify(domain, domain_id, record):
+	postdata = {
+		'user_token'	:	_dnspod_token,
+		'domain_id'		:	domain_id,
+		'record_id'		:	record['id'],
+		'sub_domain'	:	record['name'],
+		'record_type'	:	record['type'],
+		'record_line'	:	'default',
+		'value'			:	_dnspod_myip,
+		'ttl'			:	record['ttl'],
+		'format'		:	'json',
+	}
+	modify_status = url_read(api_call('records.modify'), postdata)
 	if not modify_status is None:
 		modify_result = json.loads(modify_status)
-		_dnspod_lasterror['error'] = 'Success'
-		_dnspod_lasterror['message'] = '{0}.{1} has changed IP to {2}, {3}'.format(postdata['sub_domain'], domain, 
-																				postdata['value'], modify_result['message'])
+
+		if '1' == modify_result['status']['code']:
+			output_lasterror('Success', 
+				'{0}.{1} has changed IP to {2}, {3}'.format(record['name'], domain['domain'], 
+					_dnspod_myip, modify_result['status']['message']))
+		else:
+			output_lasterror('DnspodErrorCode: {0}'.format(modify_result['status']['code']), 
+								modify_result['status']['message'])
 		return True
 	return False
 
+
+def dnspod_checkrecords(domain, domain_id):
+	records = dnspod_records(domain_id)
+	if not records is None:
+		for record in records:
+			if record['name'] in domain['sub_domain']:
+				if record['type'] == 'A' or record['type'] == 'AAAA':
+					if record['value'] != _dnspod_myip:
+						dnspod_record_modify(domain, domain_id, record)
+					else:
+						output_lasterror('Success', 
+							'{0}.{1} IP is not change.'.format(record['name'], domain['domain']))
 
 
 def dnspod_ddns():
 	if get_myip() and dnspod_login():
 		for domain in dnspod_domains:
-			records = dnspod_records(domain['domain'])
-			if not records is None:
-				for record in records:
-					if record['sub_domain'] in domain['sub_domain']:
-						if record['record_type'] == 'A' or record['record_type'] == 'AAAA':
-							if record['value'] != _dnspod_myip:
-								postdata = {
-									'sub_domain'	:	record['sub_domain'],
-									'area'			:	'0',
-									'record_type'	:	record['record_type'],
-									'value'			:	_dnspod_myip,
-									'ttl'			:	record['ttl']
-								}
-								dnspod_record_modify(domain['domain'], record['id'], postdata)
-								output_lasterror()
-			else:
-				output_lasterror()
-	else:
-		output_lasterror()
+			domain_id = dnspod_domainid(domain['domain'])
+			if domain_id > 0:
+				dnspod_checkrecords(domain, domain_id)
 
 
 def _signal_handler(signal, frame):
