@@ -21,14 +21,15 @@ Dnspod International Dynamic DNS written in Python
 ###Used in your program
 
 * Copy dnspod_inter_ddns.py to your program directory
-* Licensed under the [MIT License](http://opensource.org/licenses/mit-license.php)
 
 		from dnspod_inter_ddns import dnspod_ddns
 	
 		dnspod_ddns()
 
+* Licensed under the [MIT License](http://opensource.org/licenses/mit-license.php)
+
 ##Links
 
-[中文使用说明](http://shixf.com/dnspod-inter-ddns-cn/)
+[中文使用说明](http://shixf.com/wiki/projects/dnspod-inter-ddns-cn)
 
-[Visit Page](http://shixf.com/dnspod-inter-ddns/)
+[Visit Page](http://shixf.com/wiki/projects/dnspod-inter-ddns)
