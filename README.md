@@ -27,9 +27,3 @@ Dnspod International Dynamic DNS written in Python
 		dnspod_ddns()
 
 * Licensed under the [MIT License](http://opensource.org/licenses/mit-license.php)
-
-##Links
-
-[中文使用说明](http://shixf.com/wiki/projects/dnspod-inter-ddns-cn)
-
-[Visit Page](http://shixf.com/wiki/projects/dnspod-inter-ddns)
