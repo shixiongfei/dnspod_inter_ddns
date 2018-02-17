@@ -21,7 +21,7 @@
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
-  
+
         http://shixf.com/
 '''
 
@@ -79,7 +79,7 @@ def url_read(url, postdata=None, method=None):
     try:
         req = Request(url, data=postdata)
         req.add_header('User-Agent',
-                       'DNSPOD International DDNS/1.2.0 (jenson.shixf@gmail.com)')
+                       'DNSPOD International DDNS/1.2.1 (jenson.shixf@gmail.com)')
         if not method is None:
             req.get_method = lambda: method
         urlItem = urlopen(req, timeout=10)
@@ -96,7 +96,7 @@ def url_read(url, postdata=None, method=None):
 
 
 def get_myip():
-    myip = url_read('http://shixf.com/api/getip')
+    myip = url_read('https://shixf.com/api/getip')
     if not myip is None:
         global _dnspod_myip
         if myip != _dnspod_myip:
