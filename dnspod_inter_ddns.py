@@ -96,7 +96,7 @@ def url_read(url, postdata=None, method=None):
 
 
 def get_myip():
-    myip = url_read('https://shixf.com/api/getip')
+    myip = url_read('https://shixiongfei.com/api/getip')
     if not myip is None:
         global _dnspod_myip
         if myip != _dnspod_myip:
